@@ -15,7 +15,7 @@ Includes code to plot figures from data descriptor paper (ADD LINK).
 
 ## Installation
 ```bash
-pip install git+https://github.com/catalystneuro/ajile12-nwb-data.git
+pip install git+https://github.com/catalystneuro/brunton-lab-to-nwb.git
 ```
 
 ## Usage
