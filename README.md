@@ -1,6 +1,6 @@
 # ajile12-nwb-data
 Package for analyzing long-term naturalistic human intracranial neural recordings and pose.
-Includes code to plot figures from data descriptor paper (ADD LINK).
+Includes code to plot figures from data descriptor paper (LINK TBD).
 
 **Fig 2. Coarse behavior labelling** figs/Plot_coarse_labels.ipynb
 
