@@ -1,0 +1,78 @@
+subject_ID,label,long_name
+subj01,GRID,ECoG grid
+subj01,LAT,left anterior temporal
+subj01,LID,left insular depth
+subj01,LMT,left medial temporal
+subj01,LPT,left posterior temporal
+subj01,LTO,left temporal occipital
+subj01,EOG,electrooculogram
+subj01,ECG,electrocardiogram
+subj02,GRID,ECoG grid
+subj02,RDA,right depth anterior
+subj02,RDP,right depth posterior
+subj02,RST,right temporal
+subj03,GRID,ECoG grid
+subj03,LAD,left anterior depth
+subj03,LAT,left anterior temporal
+subj03,LMT,left medial temporal
+subj03,LPD,left posterior depth
+subj04,GRID,ECoG grid
+subj04,RAT,right anterior temporal
+subj04,RMT,right medial temporal
+subj04,RPT,right posterior temporal
+subj05,GRID,ECoG grid
+subj05,RAT,right anterior temporal
+subj05,RF,right frontal
+subj05,RMT,right medial temporal
+subj05,RPT,right posterior temporal
+subj05,RTP,right temporal pole
+subj06,L Grid,Left ECoG grid
+subj06,LO,left occipital
+subj07,RFGRID,Right Frontal ECoG grid
+subj08,GRID,ECoG grid
+subj08,RAT,right anterior temporal
+subj08,RMT,right medial temporal
+subj08,ROF,right orbitofrontal
+subj08,RPT,right posterior temporal
+subj09,Grid,ECoG grid
+subj09,LAT,left anterior temporal
+subj09,LF,left frontal
+subj09,LID,left insular depth
+subj09,LMT,left medial temporal
+subj09,LPT,left posterior temporal
+subj09,LTO,left temporal occipital
+subj09,RAT,right anterior temporal
+subj09,RATD,right anterior temporal depth
+subj09,RFD,right frontal depth
+subj09,RPT,right posterior temporal
+subj09,RPTD,right posterior temporal depth
+subj10,AHD,anterior hippocampal depth
+subj10,AID,anterior insular depth
+subj10,GRID,ECoG grid
+subj10,LAT,left anterior temporal
+subj10,LMT,left medial temporal
+subj10,LOF,left orbitofrontal
+subj10,LPT,left posterior temporal
+subj10,LTP,left temporal pole
+subj10,MHD,medial hippocampal depth
+subj10,MID,medial insular depth
+subj10,PID,posterior insular depth
+subj11,Grid,ECoG grid
+subj11,LAT,left anterior temporal
+subj11,LMT,left medial temporal
+subj11,LPT,left posterior temporal
+subj11,LTP,left temporal pole
+subj11,LTPD,left temporal pole depth
+subj11,LATD,left anterior temporal depth
+subj11,LMTD,left medial temporal depth
+subj12,AHD,anterior hippocampal depth
+subj12,AID,anterior insular depth
+subj12,GRID,ECoG grid
+subj12,LAT,left anterior temporal
+subj12,LMT,left medial temporal
+subj12,LOF,left orbitofrontal
+subj12,LPT,left posterior temporal
+subj12,LTP,left temporal pole
+subj12,PHD,posterior hippocampal depth
+subj12,PID,posterior insular depth
+subj12,RPTD,right posterior temporal depth
