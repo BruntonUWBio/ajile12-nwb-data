@@ -1,18 +1,22 @@
-pynwb
-lazy_ops
-pandas
-ndx_events
-matplotlib
-ipywidgets
-scipy
-numpy
-plotly
-joblib
-nwbwidgets
-requests
-nilearn
-h5py
-bqplot
+pynwb==1.4.0
+lazy_ops==0.2.0
+pandas==1.2.4
+ndx_events==0.2.0
+matplotlib==3.3.1
+ipywidgets==7.6.3
+scipy==1.5.2
+numpy==1.19.1
+plotly==4.14.3
+joblib==0.16.0
+nwbwidgets==0.7.0
+requests==2.24.0
+nilearn==0.6.2
+h5py==2.10.0
+bqplot==0.12.26
+natsort==7.0.1
+tqdm==4.48.2
+neurodsp==2.1.0
+seaborn==0.11.0
 git+git://github.com/NeurodataWithoutBorders/nwb-jupyter-widgets@brunton_brains
 
 
