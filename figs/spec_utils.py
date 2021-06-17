@@ -1,6 +1,5 @@
-import pdb
-import pandas as pd
 import numpy as np
+import pandas as pd
 
 def project_power(dat, roi_ind, roi_proj_loadpath, rem_bad_chans=True,
                   part_ind=0, bad_chans=[], atlas='aal', elec_dens_thresh=0):

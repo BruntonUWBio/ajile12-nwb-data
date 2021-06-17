@@ -3,23 +3,23 @@ import glob
 import natsort
 import pandas as pd
 import numpy as np
-from neurodsp.spectral import compute_spectrum
 from scipy import interpolate
 from tqdm import tqdm as tqdm
+from neurodsp.spectral import compute_spectrum
 
-from spec_utils import project_power
 from pynwb import NWBHDF5IO
 from ndx_events import LabeledEvents, AnnotatedEventsTable, Events
+from spec_utils import project_power
 
 # Set parameters
-win_spec_len = 30 # sec
-large_win = 30*60 # sec
-fs = 500 # Hz
-freq_range = [3, 125]
+win_spec_len = 30  # sec
+large_win = 30*60  # sec
+fs = 500  # Hz
+freq_range = [3, 125]  # Hz
 sp = '/data1/users/stepeter/mvmt_init/data_spec/'
 data_lp = '/data2/users/stepeter/files_nwb/downloads/000055/'
 roi_proj_loadpath = '/data1/users/stepeter/mvmt_init/data_release/roi_proj_matlab/'
-n_parts = 12
+n_parts = 12  # number of participants
 
 # Load ROI projection matrices
 atlas = 'aal'
