@@ -11,6 +11,7 @@ from scipy.signal import medfilt
 from nilearn import plotting as ni_plt
 
 from pynwb import NWBHDF5IO
+from dandi.dandiapi import DandiAPIClient
 from ndx_events import LabeledEvents, AnnotatedEventsTable, Events
 from nwbwidgets.utils.timeseries import align_by_times, timeseries_time_to_ind
 
@@ -113,11 +114,22 @@ def clabel_table_create(common_acts, n_parts=12,
                         data_lp='/data2/users/stepeter/files_nwb/downloads/000055/'):
     '''Create table of coarse label durations across participants.
     Labels to include in the table are specified by common_acts.'''
+    with DandiAPIClient() as client:
+        paths = []
+        for file in client.get_dandiset("000055", "draft").get_assets_under_path(''):
+            paths.append(file.path)
+    paths = natsort.natsorted(paths)
+    
+    
     vals_all = np.zeros([n_parts, len(common_acts)+1])
     for part_ind in range(n_parts):
-        fids = natsort.natsorted(glob.glob(data_lp+'sub-'+str(part_ind+1).zfill(2)+'/*.nwb'))
+        fids = [val for val in paths if 'sub-'+str(part_ind+1).zfill(2) in val]
         for fid in fids:
-            io = NWBHDF5IO(fid, mode='r', load_namespaces=False)
+            with DandiAPIClient() as client:
+                asset = client.get_dandiset("000055", "draft").get_asset_by_path(fid)
+                s3_path = asset.get_content_url(follow_redirects=1, strip_query=True)
+
+            io = NWBHDF5IO(s3_path, mode='r', load_namespaces=False, driver='ros3')
             nwb = io.read()
 
             curr_labels = nwb.intervals['epochs'].to_dataframe()
@@ -136,6 +148,8 @@ def clabel_table_create(common_acts, n_parts=12,
                     if sub_lab in common_acts:
                         in_lab_grp = True
                 vals_all[part_ind, -1] += durations[i]/3600 if in_lab_grp else 0
+            io.close()
+            del nwb, io
 
     # Make final table/dataframe 
     common_acts_col = [val.lstrip('Blocklist (').rstrip(')') for val in common_acts]
@@ -161,33 +175,45 @@ def identify_elecs(group_names):
     return np.array(is_surf)
 
 
-def load_data_characteristics(lp='/data2/users/stepeter/files_nwb/downloads/000055/',
-                              nparts=12):
+def load_data_characteristics(nparts=12):
     '''Load data characteristics including the number of
     good and total ECoG electrodes, hemisphere implanted,
     and number of recording days for each participant.'''
+    with DandiAPIClient() as client:
+        paths = []
+        for file in client.get_dandiset("000055", "draft").get_assets_under_path(''):
+            paths.append(file.path)
+    paths = natsort.natsorted(paths)
+    
     n_elecs_tot, n_elecs_good = [], []
     rec_days, hemis, n_elecs_surf, n_elecs_depth = [], [], [], []
     for part_ind in range(nparts):
         cur_t = 0
-        fids = natsort.natsorted(glob.glob(lp+'sub-'+str(part_ind+1).zfill(2)+'/*.nwb'))
+        fids = [val for val in paths if 'sub-'+str(part_ind+1).zfill(2) in val]
         rec_days.append(len(fids))
-        for fid in fids[:1]:
-            io = NWBHDF5IO(fid, mode='r', load_namespaces=False)
-            nwb = io.read()
 
-            # Determine good/total electrodes
-            n_elecs_good.append(np.sum(nwb.electrodes['good'][:]))
-            n_elecs_tot.append(len(nwb.electrodes['good'][:]))
+        with DandiAPIClient() as client:
+            asset = client.get_dandiset("000055", "draft").get_asset_by_path(fids[0])
+            s3_path = asset.get_content_url(follow_redirects=1, strip_query=True)
 
-            # Determine implanted hemisphere
-            c_wrist = nwb.processing['behavior'].data_interfaces['ReachEvents'].description[0]
-            hemis.append('L' if c_wrist == 'r' else 'R')
+        io = NWBHDF5IO(s3_path, mode='r', load_namespaces=False, driver='ros3')
+        nwb = io.read()
 
-            # Determine surface vs. depth electrode count
-            is_surf = identify_elecs(nwb.electrodes['group_name'][:])
-            n_elecs_surf.append(np.sum(is_surf))
-            n_elecs_depth.append(np.sum(1-is_surf))
+        # Determine good/total electrodes
+        nwb_elecs = nwb.electrodes['good'][:]
+        n_elecs_good.append(np.sum(nwb_elecs))
+        n_elecs_tot.append(len(nwb_elecs))
+
+        # Determine implanted hemisphere
+        c_wrist = nwb.processing['behavior'].data_interfaces['ReachEvents'].description[0]
+        hemis.append('L' if c_wrist == 'r' else 'R')
+
+        # Determine surface vs. depth electrode count
+        is_surf = identify_elecs(nwb.electrodes['group_name'][:])
+        n_elecs_surf.append(np.sum(is_surf))
+        n_elecs_depth.append(np.sum(1-is_surf))
+        io.close()
+        del nwb, io
 
     part_nums = [val+1 for val in range(nparts)]
     part_ids = ['P'+str(val).zfill(2) for val in part_nums]
@@ -197,13 +223,17 @@ def load_data_characteristics(lp='/data2/users/stepeter/files_nwb/downloads/0000
 
 
 def plot_ecog_descript(n_elecs_tot, n_elecs_good, part_ids,
-                       lp='/data2/users/stepeter/files_nwb/downloads/000055/',
                        nparts=12, allLH=False, nrows=3,
                        chan_labels='all', width=7, height=3):
     '''Plot ECoG electrode positions and identified noisy
     electrodes side by side.'''
-    fig = plt.figure(figsize=(width, height), dpi=150)
+    with DandiAPIClient() as client:
+        paths = []
+        for file in client.get_dandiset("000055", "draft").get_assets_under_path(''):
+            paths.append(file.path)
+    paths = natsort.natsorted(paths)
     
+    fig = plt.figure(figsize=(width, height), dpi=150)
     # First subplot: electrode locations
     ncols = nparts//nrows
     gs = gridspec.GridSpec(nrows=nrows, 
@@ -217,8 +247,12 @@ def plot_ecog_descript(n_elecs_tot, n_elecs_good, part_ids,
 
     for part_ind in range(nparts):
         # Load NWB data file
-        fids = natsort.natsorted(glob.glob(lp+'sub-'+str(part_ind+1).zfill(2)+'/*.nwb'))
-        io = NWBHDF5IO(fids[0], mode='r', load_namespaces=False)
+        fids = [val for val in paths if 'sub-'+str(part_ind+1).zfill(2) in val]
+        with DandiAPIClient() as client:
+            asset = client.get_dandiset("000055", "draft").get_asset_by_path(fids[0])
+            s3_path = asset.get_content_url(follow_redirects=1, strip_query=True)
+
+        io = NWBHDF5IO(s3_path, mode='r', load_namespaces=False, driver='ros3')
         nwb = io.read()
 
         # Determine hemisphere to display
@@ -235,6 +269,9 @@ def plot_ecog_descript(n_elecs_tot, n_elecs_good, part_ids,
                                                node_edge_colors='k',edge_linewidths=0.5,
                                                ax_in=ax[part_ind],allLH=allLH)
         ax[part_ind].text(-0.2,0.1,'P'+str(part_ind+1).zfill(2), fontsize=8)
+        io.close()
+        del nwb, io
+        
     fig.text(0.1, 0.91, '(a) ECoG electrode positions', fontsize=10)
     
     # Second subplot: noisy electrodes per participant
@@ -563,10 +600,10 @@ def plot_dlc_recon_errs(fig, ax):
                  fontsize=10)
 
 
-def plot_wrist_trajs(fig, ax, lp, base_start=-1.5, base_end=-1,
+def plot_wrist_trajs(fig, ax, base_start=-1.5, base_end=-1,
                      before=3, after=3, fs_video=30, n_parts=12):
     '''Plot contralateral wrist trajectories during move onset events.'''
-    df_pose, part_lst = _get_wrist_trajs(lp, base_start, base_end, before, after,
+    df_pose, part_lst = _get_wrist_trajs(base_start, base_end, before, after,
                                fs_video, n_parts)
     
     df_pose_orig = df_pose.copy()
@@ -594,19 +631,29 @@ def plot_wrist_trajs(fig, ax, lp, base_start=-1.5, base_end=-1,
                  fontsize=10)
 
 
-def _get_wrist_trajs(lp, base_start=-1.5, base_end=-1,
+def _get_wrist_trajs(base_start=-1.5, base_end=-1,
                      before=3, after=3, fs_video=30,
                      n_parts=12):
     '''Load in wrist trajectories around move onset events.'''
+    with DandiAPIClient() as client:
+        paths = []
+        for file in client.get_dandiset("000055", "draft").get_assets_under_path(''):
+            paths.append(file.path)
+    paths = natsort.natsorted(paths)
+    
     displ_lst, part_lst, time_lst, pose_lst = [], [], [], []
     for pat in range(n_parts):
-        fids = natsort.natsorted(glob.glob(lp+'sub-'+str(pat+1).zfill(2)+'/*.nwb'))
+        fids = [val for val in paths if 'sub-'+str(pat+1).zfill(2) in val]
         for i, fid in enumerate(fids):
-            io = NWBHDF5IO(fid, mode='r', load_namespaces=False)
-            nwb_file = io.read()
+            with DandiAPIClient() as client:
+                asset = client.get_dandiset("000055", "draft").get_asset_by_path(fid)
+                s3_path = asset.get_content_url(follow_redirects=1, strip_query=True)
+
+            io = NWBHDF5IO(s3_path, mode='r', load_namespaces=False, driver='ros3')
+            nwb = io.read()
 
             # Segment data
-            events = nwb_file.processing["behavior"].data_interfaces["ReachEvents"]
+            events = nwb.processing["behavior"].data_interfaces["ReachEvents"]
             times = events.timestamps[:]
             starts = times - before
             stops = times + after
@@ -620,7 +667,7 @@ def _get_wrist_trajs(lp, base_start=-1.5, base_end=-1,
 
             reach_lab = ['contra', 'ipsi']
             for k, reach_arm in enumerate([contra_arm, ipsi_arm]):
-                spatial_series = nwb_file.processing["behavior"].data_interfaces["Position"][reach_arm]
+                spatial_series = nwb.processing["behavior"].data_interfaces["Position"][reach_arm]
                 ep_dat = align_by_times(spatial_series, starts, stops)
                 ep_dat_mag = np.sqrt(np.square(ep_dat[...,0]) + np.square(ep_dat[...,1]))
 
@@ -649,6 +696,8 @@ def _get_wrist_trajs(lp, base_start=-1.5, base_end=-1,
                     part_lst.extend(['P'+str(pat+1).zfill(2)]*n_tpoints)
                     time_lst.extend(t_vals.tolist())
                     pose_lst.extend([reach_lab[k]]*n_tpoints)
+            io.close()
+            del nwb, io
 
     df_pose = pd.DataFrame({'Displ': displ_lst, 'Sbj': part_lst,
                             'Time': time_lst, 'Contra': pose_lst})
