@@ -1,6 +1,5 @@
 import glob
 import natsort
-import pandas as pd
 import numpy as np
 from scipy import interpolate
 from tqdm import tqdm as tqdm
@@ -8,7 +7,7 @@ from neurodsp.spectral import compute_spectrum
 
 from pynwb import NWBHDF5IO
 from ndx_events import LabeledEvents, AnnotatedEventsTable, Events
-from spec_utils import project_power
+from spec_utils import project_power, proj_mat_compute
 
 # Set parameters
 win_spec_len = 30  # sec
@@ -17,22 +16,41 @@ fs = 500  # Hz
 freq_range = [3, 125]  # Hz
 sp = '/data1/users/stepeter/mvmt_init/data_spec/'
 data_lp = '/data2/users/stepeter/files_nwb/downloads/000055/'
-roi_proj_loadpath = '/data1/users/stepeter/mvmt_init/data_release/roi_proj_matlab/'
+hgrid_fid = '/home/stepeter/AJILE/ajile12-nwb-data/headGrid.mat'
+aal_fid = '/home/stepeter/AJILE/ajile12-nwb-data/aal_rois.mat'
 n_parts = 12  # number of participants
 
-# Load ROI projection matrices
-atlas = 'aal'
+# Create ROI projection matrices
 elec_dens_thresh = 3 #threshold for dipole density
+proj_mats = []
 for s in range(n_parts):
-    df = pd.read_csv(roi_proj_loadpath+atlas+'_'+str(s+1).zfill(2)+'_elecs2ROI.csv')
+    fid = natsort.natsorted(glob.glob(data_lp+'sub-'+str(s+1).zfill(2)+'/*.nwb'))[0]
+    io = NWBHDF5IO(fid, mode='r', load_namespaces=False)
+    nwb = io.read()
+    elec_locs = np.vstack((nwb.electrodes['x'][:],
+                           nwb.electrodes['y'][:],
+                           nwb.electrodes['z'][:])).T
+
+    elec_locs[elec_locs[:,0]>0, 0] = -elec_locs[elec_locs[:,0]>0, 0] # flip all electrodes to left hemisphere
+    
+    keep_inds = (1-np.isnan(elec_locs[:,0])).nonzero()[0]
+    elec_locs = elec_locs[keep_inds,:]  # remove NaN electrode locations
+    good_chans = nwb.electrodes['good'][:].astype('int')
+    bad_chans = np.nonzero(1-good_chans[keep_inds])[0]
+    
+    tot_elec_density, weight_mat, roi_labels = proj_mat_compute(elec_locs, hgrid_fid,
+                                                                fwhm=20, bad_chans=bad_chans,
+                                                                aal_fid=aal_fid)
     if s==0:
-        elec_densities = df.iloc[0]
+        elec_densities = tot_elec_density.copy()
     else:
-        elec_densities += df.iloc[0]
-elec_densities = elec_densities/n_parts 
+        elec_densities += tot_elec_density.copy()
+    proj_mats.append(weight_mat)
+        
+elec_densities = elec_densities/n_parts
 #Select ROI's that have electrode density above threshold
-good_rois = np.nonzero(np.asarray(elec_densities)>elec_dens_thresh)[0]
-roi_labels = df.columns.tolist()
+good_rois = np.nonzero(elec_densities>elec_dens_thresh)[0]
+proj_mats = np.asarray(proj_mats)
 print('Selected '+str(len(good_rois))+' regions')
 
 selected_rois = np.arange(len(good_rois)).tolist() #0
@@ -49,9 +67,6 @@ for part_ind in tqdm(range(n_parts)):
         for j, fid in enumerate(fids):
             io = NWBHDF5IO(fid, mode='r', load_namespaces=False)
             nwb = io.read()
-
-            good_chans = nwb.electrodes['good'][:].astype('int')
-            bad_chans = np.nonzero(1-good_chans)[0]
 
             N_dat = len(nwb.acquisition['ElectricalSeries'].data)
             window_starts_ep = np.arange(0, N_dat, large_win_samps)
@@ -73,9 +88,7 @@ for part_ind in tqdm(range(n_parts)):
                     spg_new = f(freqs)
 
                     # Project power to ROI of interest
-                    spg_proj = project_power(spg_new, good_rois[selected_roi], roi_proj_loadpath,
-                                             part_ind=part_ind, bad_chans=bad_chans,
-                                             atlas=atlas, elec_dens_thresh=elec_dens_thresh)
+                    spg_proj = project_power(spg_new, proj_mats[part_ind], good_rois[selected_roi])
 
                     # Append result to final list
                     if pows_sbj is None:
@@ -87,5 +100,5 @@ for part_ind in tqdm(range(n_parts)):
 
         # Save power result
         roi_curr = roi_labels[good_rois[selected_roi]][:-2]
-        np.save(sp+'P'+str(part_ind+1).zfill(2)+'_'+roi_curr+'.npy',pows_sbj)
+        np.save(sp+'P'+str(part_ind+1).zfill(2)+'_'+roi_curr+'_new.npy',pows_sbj)
         del pows_sbj
