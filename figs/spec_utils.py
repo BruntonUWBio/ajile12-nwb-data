@@ -124,13 +124,18 @@ def proj_mat_compute(elec_locs, hgrid_fid, fwhm=20, bad_chans=[], aal_fid=None):
         for i in range(n_rois):
             aal_rois[0,i]['membershipProbabilityCube'] = np.swapaxes(aal_rois[0,i]['membershipProbabilityCube'], 0, 2)
             labels.append(''.join(aal_rois[0,i]['label'][0]))
-        
+
         # Compute projection matrix onto specific AAL regions
-        dipoleDensityROI = np.zeros((n_rois))
         dipoleProbabilityInRegion = np.zeros((n_elecs, n_rois))
         for i in range(n_rois):
             dipoleProbabilityInRegion[:, i] = gaussianWeightMatrix @ aal_rois[0,i]['membershipProbabilityCube'][headGrid_in['insideBrainCube']]
-            dipoleDensityROI[i] = np.sum(dipoleProbabilityInRegion[:, i])
-        return dipoleDensityROI, dipoleProbabilityInRegion, labels
+        dipoleDensityROI = dipoleProbabilityInRegion.sum(0)
+
+        # Normalize across ROI's (necessary for scaling)
+        normdipoleProbabilityInRegion = np.zeros((n_elecs, n_rois))
+        for j in range(n_rois):
+            normdipoleProbabilityInRegion[:,j] = dipoleProbabilityInRegion[:,j]/dipoleProbabilityInRegion[:,j].sum()
+
+        return dipoleDensityROI, normdipoleProbabilityInRegion, labels
     
     return totalDipoleDensity, gaussianWeightMatrix
