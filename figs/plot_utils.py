@@ -511,7 +511,7 @@ def _ecog_pow_group(fig, ax, lp, rois_plt, freq_range, sbplt_titles,
         ax_curr.set_xlabel(xlab, fontsize=9)
         if k%ncols > 0:
             l_yticks = len(ax_curr.get_yticklabels())
-            ax_curr.set_yticks(ax_curr.get_yticks().tolist())
+#             ax_curr.set_yticks(ax_curr.get_yticks().tolist())
             ax_curr.set_yticklabels(['']*l_yticks)
         ax_curr.tick_params(axis='both', which='major', labelsize=8)
         ax_curr.set_title(sbplt_titles[k], fontsize=9)
@@ -560,7 +560,7 @@ def _ecog_pow_single(fig, ax, lp, rois_plt, freq_range, sbplt_titles,
         ax_curr.set_xlabel(xlab, fontsize=9)
         if k%ncols > 0:
             l_yticks = len(ax_curr.get_yticklabels())
-            ax_curr.set_yticks(ax_curr.get_yticks().tolist())
+#             ax_curr.set_yticks(ax_curr.get_yticks().tolist())
             ax_curr.set_yticklabels(['']*l_yticks)
         ax_curr.tick_params(axis='both', which='major', labelsize=8)
         ax_curr.set_title(sbplt_titles[k], fontsize=9)
