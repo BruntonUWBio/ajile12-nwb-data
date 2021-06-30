@@ -202,18 +202,18 @@ def plot_ecog_descript(n_elecs_tot, n_elecs_good, part_ids,
                        chan_labels='all', width=7, height=3):
     '''Plot ECoG electrode positions and identified noisy
     electrodes side by side.'''
-    fig = plt.figure(figsize=(width, height), dpi=150)
+    fig = plt.figure(figsize=(width*3, height*3), dpi=150)
     
     # First subplot: electrode locations
     ncols = nparts//nrows
     gs = gridspec.GridSpec(nrows=nrows, 
-                           ncols=ncols+2, 
+                           ncols=ncols, #+2, 
                            figure=fig, 
-                           width_ratios= [width/ncols/2]*ncols+[width/10, 4*width/10],
+                           width_ratios= [width/ncols]*ncols, #[width/ncols/2]*ncols+[width/10, 4*width/10],
                            height_ratios= [height/nrows]*nrows,
-                           wspace=0, hspace=0
+                           wspace=0, hspace=-.5
                           )
-    ax = [None]*(nparts+1)
+    ax = [None]*(nparts) #+1)
 
     for part_ind in range(nparts):
         # Load NWB data file
@@ -230,26 +230,27 @@ def plot_ecog_descript(n_elecs_tot, n_elecs_good, part_ids,
 
         # Run electrode plotting function
         ax[part_ind] = fig.add_subplot(gs[part_ind//ncols, part_ind%ncols])
-        plot_ecog_electrodes_mni_from_nwb_file(nwb,chan_labels,num_grid_chans=64,node_size=5,
+        plot_ecog_electrodes_mni_from_nwb_file(nwb,chan_labels,num_grid_chans=64,node_size=50,
                                                colors='silver',alpha=.9,sides_2_display=sides_2_display,
-                                               node_edge_colors='k',edge_linewidths=0.5,
+                                               node_edge_colors='k',edge_linewidths=1.5,
                                                ax_in=ax[part_ind],allLH=allLH)
-        ax[part_ind].text(-0.2,0.1,'P'+str(part_ind+1).zfill(2), fontsize=8)
-    fig.text(0.1, 0.91, '(a) ECoG electrode positions', fontsize=10)
+#         ax[part_ind].text(-0.2,0.1,'P'+str(part_ind+1).zfill(2), fontsize=8)
+#     fig.text(0.1, 0.91, '(a) ECoG electrode positions', fontsize=10)
     
     # Second subplot: noisy electrodes per participant
-    ax[-1] = fig.add_subplot(gs[:, -1])
-    ax[-1].bar(part_ids,n_elecs_tot,color='lightgrey')
-    ax[-1].bar(part_ids,n_elecs_good,color='dimgrey')
-    ax[-1].spines['right'].set_visible(False)
-    ax[-1].spines['top'].set_visible(False)
-    ax[-1].set_xticklabels(part_ids, rotation=45)
-    ax[-1].legend(['Total','Good'], frameon=False, fontsize=8)
-    ax[-1].tick_params(labelsize=9)
-    ax[-1].set_ylabel('Number of electrodes', fontsize=9, labelpad=0)
-    ax[-1].set_title('(b) Total/good electrodes per participant',
-                    fontsize=10)
+#     ax[-1] = fig.add_subplot(gs[:, -1])
+#     ax[-1].bar(part_ids,n_elecs_tot,color='lightgrey')
+#     ax[-1].bar(part_ids,n_elecs_good,color='dimgrey')
+#     ax[-1].spines['right'].set_visible(False)
+#     ax[-1].spines['top'].set_visible(False)
+#     ax[-1].set_xticklabels(part_ids, rotation=45)
+#     ax[-1].legend(['Total','Good'], frameon=False, fontsize=8)
+#     ax[-1].tick_params(labelsize=9)
+#     ax[-1].set_ylabel('Number of electrodes', fontsize=9, labelpad=0)
+#     ax[-1].set_title('(b) Total/good electrodes per participant',
+#                     fontsize=10)
     plt.show()
+    return fig
 
 
 def plot_ecog_electrodes_mni_from_nwb_file(nwb_dat,chan_labels='all',num_grid_chans=64,colors=None,node_size=50,
@@ -534,12 +535,12 @@ def plot_dlc_recon_errs(fig, ax):
     '''Plots DeepLabCut reconstruction errors on training and heldout
     images. This information is not present in the NWB files.'''
     # DLC reconstruction errors [train set, holdout set]
-    sbj_d = {'a0f66459': [1.45, 4.27], 'c95c1e82': [1.44, 3.58],
-             'cb46fd46': [1.58, 6.95], 'fcb01f7a': [1.63, 6.02],
-             'ffb52f92': [1.43, 3.42], 'b4ac1726': [1.43, 6.63],
-             'f3b79359': [1.51, 5.45], 'ec761078': [1.84, 10.35],
-             'f0bbc9a9': [1.4, 4.05], 'abdb496b': [1.48, 7.59],
-             'ec168864': [1.51, 5.45], 'b45e3f7b': [1.52, 4.73]}
+    sbj_d = {'P01': [1.45, 4.27], 'P02': [1.44, 3.58],
+             'P03': [1.58, 6.95], 'P04': [1.63, 6.02],
+             'P05': [1.43, 3.42], 'P06': [1.43, 6.63],
+             'P07': [1.51, 5.45], 'P08': [1.84, 10.35],
+             'P09': [1.4, 4.05], 'P10': [1.48, 7.59],
+             'P11': [1.51, 5.45], 'P12': [1.52, 4.73]}
 
     train_err = [val[0] for key, val in sbj_d.items()]
     test_err = [val[1] for key, val in sbj_d.items()]
