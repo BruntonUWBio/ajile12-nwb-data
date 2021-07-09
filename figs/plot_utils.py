@@ -14,8 +14,9 @@ from pynwb import NWBHDF5IO
 from ndx_events import LabeledEvents, AnnotatedEventsTable, Events
 from nwbwidgets.utils.timeseries import align_by_times, timeseries_time_to_ind
 
-def prune_clabels(clabels_orig, targeted=False, first_val=True,
-                  targ_tlims=[13, 17]):
+def prune_clabels(clabels_orig, targeted=False,
+                  targ_tlims=[13, 17], first_val=True,
+                  targ_label='Eat'):
     '''Modify coarse behavior labels based on whether
     looking at whole day (targeted=False) or specific
     hours (targeted=True). When selecting specific
@@ -35,14 +36,18 @@ def prune_clabels(clabels_orig, targeted=False, first_val=True,
     else:
         for i in range(len(clabels_orig)):
             lab = clabels_orig.loc[i, 'labels']
-            if lab[:5] == 'Block':
-                clabels.loc[i, 'labels'] = 'Blocklist'
-            elif lab == '':
-                clabels.loc[i, 'labels'] = 'Blocklist'
-            elif first_val:
-                clabels.loc[i, 'labels'] = lab.split(', ')[0]
+            if targ_label in lab.split(', '):
+                clabels.loc[i, 'labels'] = targ_label
             else:
-                clabels.loc[i, 'labels'] = lab.split(', ')[-1]
+                clabels.loc[i, 'labels'] = 'Blocklist'
+#             if lab[:5] == 'Block':
+#                 clabels.loc[i, 'labels'] = 'Blocklist'
+#             elif lab == '':
+#                 clabels.loc[i, 'labels'] = 'Blocklist'
+#             elif first_val:
+#                 clabels.loc[i, 'labels'] = lab.split(', ')[0]
+#             else:
+#                 clabels.loc[i, 'labels'] = lab.split(', ')[-1]
 
     if targeted:
         start_val, end_val = targ_tlims[0]*3600, targ_tlims[1]*3600
@@ -55,21 +60,23 @@ def prune_clabels(clabels_orig, targeted=False, first_val=True,
 
 def plot_clabels(clabels, uni_labs, targeted=False, first_val=True,
                  targ_tlims=[13, 17], scale_fact=1/3600,
-                 bwidth=0.5):
+                 bwidth=0.5, targlab_colind=0):
     '''Plot coarse labels for one recording day.
     Note that the colors for the plots are currently
     pre-defined to work for sub-01 day 4.'''
     # Define colors for each label
     act_cols = plt.get_cmap('Reds')(np.linspace(0.15, 0.85, 5))
     if targeted:
-        if first_val:
-            category_colors = np.array(['dimgray', act_cols[1], act_cols[2],
-                                        act_cols[0], act_cols[3], act_cols[4]],
-                                       dtype=object)
-        else:
-            category_colors = np.array(['dimgray', act_cols[1], act_cols[0],
-                                        act_cols[3], act_cols[4]],
-                                       dtype=object)
+        category_colors = np.array(['w', act_cols[targlab_colind]],
+                                   dtype=object)
+#         if first_val:
+#             category_colors = np.array(['dimgray', act_cols[1], act_cols[2],
+#                                         act_cols[0], act_cols[3], act_cols[4]],
+#                                        dtype=object)
+#         else:
+#             category_colors = np.array(['dimgray', act_cols[1], act_cols[0],
+#                                         act_cols[3], act_cols[4]],
+#                                        dtype=object)
     else:
         category_colors = np.array([[1, 128/255, 178/255],'dimgray',
                                     'lightgreen','lightskyblue'],
@@ -107,6 +114,7 @@ def plot_clabels(clabels, uni_labs, targeted=False, first_val=True,
     ax.spines['left'].set_visible(False)
     ax.spines['right'].set_visible(False)
     plt.show()
+    return fig
 
 
 def clabel_table_create(common_acts, n_parts=12,
