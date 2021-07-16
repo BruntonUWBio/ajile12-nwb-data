@@ -2,9 +2,9 @@
 Package for analyzing long-term naturalistic human intracranial neural recordings and pose.
 Includes code to plot figures from data descriptor paper (LINK TBD).
 
-Our data dashboard is available for streaming (stream_dashboard.ipynb) and
-offline (offline_dashboard.ipynb) viewing. All figure/table scripts are also
-available for offline (figs_offline) and streaming (figs_stream). Note that
+Our data dashboard is available for streaming (*stream_dashboard.ipynb*) and
+offline (*offline_dashboard.ipynb*) viewing. All figure/table scripts are also
+available for offline (*figs_offline*) and streaming (*figs_stream*). Note that
 while streaming is fast for the data dashboard, the figure/table scripts have
 not been optimized for streaming and will run slowly.
 
