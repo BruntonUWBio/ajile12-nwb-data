@@ -175,7 +175,8 @@ def load_data_characteristics(lp='/data2/users/stepeter/files_nwb/downloads/0000
     good and total ECoG electrodes, hemisphere implanted,
     and number of recording days for each participant.'''
     n_elecs_tot, n_elecs_good = [], []
-    rec_days, hemis, n_elecs_surf, n_elecs_depth = [], [], [], []
+    rec_days, hemis, n_elecs_surf_tot, n_elecs_depth_tot = [], [], [], []
+    n_elecs_surf_good, n_elecs_depth_good = [], []
     for part_ind in range(nparts):
         cur_t = 0
         fids = natsort.natsorted(glob.glob(lp+'sub-'+str(part_ind+1).zfill(2)+'/*.nwb'))
@@ -194,14 +195,17 @@ def load_data_characteristics(lp='/data2/users/stepeter/files_nwb/downloads/0000
 
             # Determine surface vs. depth electrode count
             is_surf = identify_elecs(nwb.electrodes['group_name'][:])
-            n_elecs_surf.append(np.sum(is_surf))
-            n_elecs_depth.append(np.sum(1-is_surf))
+            n_elecs_surf_tot.append(np.sum(is_surf))
+            n_elecs_depth_tot.append(np.sum(1-is_surf))
+            n_elecs_surf_good.append(np.sum(nwb.electrodes['good'][is_surf.nonzero()[0]]))
+            n_elecs_depth_good.append(np.sum(nwb.electrodes['good'][(1-is_surf).nonzero()[0]]))
 
     part_nums = [val+1 for val in range(nparts)]
     part_ids = ['P'+str(val).zfill(2) for val in part_nums]
     
-    return [rec_days, hemis, n_elecs_surf, n_elecs_depth, part_nums,
-           part_ids, n_elecs_good, n_elecs_tot]
+    return [rec_days, hemis, n_elecs_surf_tot, n_elecs_surf_good,
+            n_elecs_depth_tot, n_elecs_depth_good, part_nums,
+            part_ids, n_elecs_good, n_elecs_tot]
 
 
 def plot_ecog_descript(n_elecs_tot, n_elecs_good, part_ids,
