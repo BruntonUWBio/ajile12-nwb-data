@@ -2,13 +2,16 @@
 Package for analyzing long-term naturalistic human intracranial neural recordings and pose.
 Includes code to plot figures from data descriptor paper (LINK TBD).
 
-**Fig 2. Coarse behavior labelling:** figs/Plot_coarse_labels.ipynb
+Our data dashboard is available for streaming (stream_dashboard.ipynb) and
+offline (offline_dashboard.ipynb) viewing. All figure/table scripts are also
+available for offline (figs_offline) and streaming (figs_stream). Note that
+while streaming is fast for the data dashboard, the figure/table scripts have
+not been optimized for streaming and will run slowly.
 
-**Tables 3-4. Coarse activity/blocklist durations** figs/Coarse_label_tables.ipynb
+**Fig 2. Coarse behavior labelling:** figs_offline/Fig_coarse_labels.ipynb
 
-**Fig 3. ECoG electrode positions and identified noisy electrodes** figs/ECoG_descript.ipynb
+**Fig 3. ECoG electrode positions and technical validation** figs_offline/Fig_pow_spectra.ipynb (requires running *figs_offline/comput_cont_spec.py* first)
 
-**Fig 4. ECoG power spectra over time** figs/Plot_pow_spectra.ipynb (requires running *figs/comput_cont_spec.py* first)
+**Table 2. Individual participant characteristics** figs_offline/Table_part_characteristics.ipynb
 
-**Fig 5. Validation of pose trajectories and movement event selection** figs/Pose_validate.ipynb
-
+**Tables 3-4. Coarse activity/blocklist durations** figs_offline/Table_coarse_labels.ipynb
