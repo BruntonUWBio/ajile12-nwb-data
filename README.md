@@ -1,6 +1,8 @@
 # ajile12-nwb-data
-Package for analyzing long-term naturalistic human intracranial neural recordings and pose.
-Includes code to plot figures from data descriptor paper (LINK TBD).
+Package for analyzing long-term naturalistic human intracranial neural recordings and pose
+([dataset link](https://doi.org/10.48324/dandi.000055/0.220127.0436)).
+Includes code to plot figures from [data descriptor paper](https://doi.org/10.1101/2021.07.26.453884).
+We have provided an [example script](Example_AJILE12_exploratory_analysis.ipynb) showing how to extract neural and pose data and quantify interactions between them.
 
 Our data dashboard is available for streaming (*stream_dashboard.ipynb*) and
 offline (*offline_dashboard.ipynb*) viewing. All figure/table scripts are also
