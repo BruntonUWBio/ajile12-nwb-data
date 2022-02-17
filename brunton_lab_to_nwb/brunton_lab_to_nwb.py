@@ -1,3 +1,47 @@
+"""Convert original data files to NWB format.
+
+Converts local ECoG and pose data files (in H5 format) and converts
+them to the Neurodata Without Borders (NWB) format. This script was
+used to generate our publicly-available dataset on DANDI.
+
+
+Authors
+-------
+Michael Scheid, Ben Dichter, Cody Baker, Steven Peterson
+
+
+Modification history
+--------------------
+02/16/2022 - Add comments and header
+
+06/07/2021 - Fixed bug where coarse behavioral event time was off by a factor of 900
+
+11/21/2020 - Created script
+
+
+License
+-------
+Copyright (c) 2020 CatalystNeuro
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
+"""
+
 import os
 import re
 import uuid
@@ -31,12 +75,14 @@ def run_conversion(
         special_chans=SPECIAL_CHANNELS,
         session_description='no description'
 ):
+    """Convert specified ECoG, pose, and metadata files to NWB format."""
     print(f"Converting {fpath_in}...")
-    fname = os.path.split(os.path.splitext(fpath_in)[0])[1]
-    _, subject_id, _, session = fname.split('_')
+    fname = os.path.split(os.path.splitext(fpath_in)[0])[1]  # filename without file extension
+    _, subject_id, _, session = fname.split('_')  # extract subject/session numbers from file name
 
-    file = File(fpath_in, 'r')
+    file = File(fpath_in, 'r')  # open ECoG file for reading
 
+    # Instantiate Neurodata Without Borders (NWB) class for the particular subject and session
     nwbfile = NWBFile(
         session_description=session_description,
         identifier=str(uuid.uuid4()),
@@ -45,14 +91,14 @@ def run_conversion(
         session_id=session
     )
 
-    # extract electrode groups
+    # Extract information about ECoG electrode positions/groupings
     file_elec_col_names = file['chan_info']['axis1'][:]
     elec_data = file['chan_info']['block0_values']
 
+    # Separately record the group name and number for each electrode
+    # label (e.g. GRID15)
     re_exp = re.compile("([ a-zA-Z]+)([0-9]+)")
-
     channel_labels_dset = file['chan_info']['axis0']
-
     group_names, group_nums = [], []
     for i, bytes_ in enumerate(channel_labels_dset):
         if bytes_ not in special_chans:
@@ -61,11 +107,9 @@ def run_conversion(
             group_names.append(res[0])
             group_nums.append(int(res[1]))
 
+    # Check for any non-neural electrodes (ECG or EOG) and include extra description
     is_elec = ~np.isin(channel_labels_dset, special_chans)
-
-    dset = DatasetView(file['dataset']).lazy_transpose()
-
-    # add special channels
+    dset = DatasetView(file['dataset']).lazy_transpose()  # 2D array of ECoG data (electrodes x time)
     for kwargs in (
             dict(
                 name='EOGL',
@@ -95,7 +139,7 @@ def run_conversion(
                 )
             )
 
-    # add electrode groups
+    # Add electrode groups (dictionary of electrode groupings with descriptive information)
     df = pd.read_csv(elec_loc_labels_path)
     df_subject = df[df['subject_ID'] == 'subj' + subject_id]
     electrode_group_descriptions = {row['label']: row['long_name'] for _, row in df_subject.iterrows()}
@@ -110,7 +154,7 @@ def run_conversion(
             location='unknown'
         )
 
-    # add required cols to electrodes table
+    # Add required cols to electrodes dataframe, including XYZ position and group name
     for row, group_name in zip(elec_data[:].T, group_names):
         nwbfile.add_electrode(
             x=row[file_elec_col_names == b'X'][0],
@@ -122,18 +166,18 @@ def run_conversion(
             group=groups_map[group_name],
         )
 
-    # load r2 values to input into custom cols in electrodes table
+    # Load r2 scores from prior regression analysis to electrodes dataframe
     r2 = np.load(r2_path)
     low_freq_r2 = np.ravel(r2[int(subject_id)-1, :len(group_names), 0])
-
     high_freq_r2 = np.ravel(r2[int(subject_id)-1, :len(group_names), 1])
 
-    # add custom cols to electrodes table
+    # Add custom column to electrodes dataframe
     elecs_dset = file['chan_info']['block0_values']
 
     def get_data(label):
         return elecs_dset[file_elec_col_names == label, :].ravel()[is_elec]
 
+    # Add electrode-specific information to electrodes dataframe
     [nwbfile.add_electrode_column(**kwargs) for kwargs in (
         dict(
             name='standard_deviation',
@@ -168,10 +212,7 @@ def run_conversion(
         )
     )]
 
-    # confirm that electrodes table looks right
-    # nwbfile.electrodes.to_dataframe()
-
-    # add ElectricalSeries
+    # Add ElectricalSeries (includes ECoG data [electrodes x time] and descriptive info)
     elecs_data = dset.lazy_slice[:, is_elec]
     n_bytes = np.dtype(elecs_data).itemsize
 
@@ -195,7 +236,7 @@ def run_conversion(
         )
     )
 
-    # add pose data
+    # Add pose data to SpatialSeries (includes pose data [keypoints x time] and descriptive info)
     pose_dset = file['pose_data']['block0_values']
 
     nwbfile.create_processing_module(
@@ -219,7 +260,7 @@ def run_conversion(
         )
     )
 
-    # add events
+    # Add right wrist movement onset events
     events = pd.read_csv(events_path)
     mask = (events['Subject'] == int(subject_id)) & (events['Recording day'] == int(session))
     events = events[mask]
@@ -229,18 +270,19 @@ def run_conversion(
     events = Events(
         name='ReachEvents',
         description=events['Event type'][0],  # Specifies which arm was used
-        timestamps=timestamps,
+        timestamps=timestamps,  # time when each event started
         resolution=2e-3,  # resolution of the timestamps, i.e., smallest possible difference between timestamps
     )
 
-    # add the Events type to the processing group of the NWB file
+    # Add the Events type to the processing group of the NWB file
     nwbfile.processing['behavior'].add(events)
 
-    # add coarse behavioral labels
+    # Add coarse behavioral labels (load from NPY file)
     event_fp = f'sub{subject_id}_fullday_{session}'
     full_fp = coarse_events_path + '//' + event_fp + '.npy'
     coarse_events = np.load(full_fp, allow_pickle=True)
 
+    # To minimize memory usage, one coarse label entry is defined for each timeperiod with the same label
     label, data = np.unique(coarse_events, return_inverse=True)
     transition_idx = np.where(np.diff(data) != 0)
     start_t = nwbfile.processing["behavior"].data_interfaces["Position"]['L_Wrist'].starting_time
@@ -253,9 +295,9 @@ def run_conversion(
     nwbfile.add_epoch_column(name='labels', description='Coarse behavioral labels')
 
     for start_time, stop_time, label in zip(times[:-1], times[1:], transition_labels):
-        nwbfile.add_epoch(start_time=start_time, stop_time=stop_time, labels=label)
+        nwbfile.add_epoch(start_time=start_time, stop_time=stop_time, labels=label)  # includes start/end time and label
 
-    # add additional reaching features
+    # Add additional metadata related to the detected movement events (describing movement behavior)
     reach_features = pd.read_csv(reach_features_path)
     mask = (reach_features['Subject'] == int(subject_id)) & (reach_features['Recording day'] == int(session))
     reach_features = reach_features[mask]
@@ -278,6 +320,8 @@ def run_conversion(
                                                           'unimanual (0) or bimanual (1) based on how close in time a '
                                                           'ipsilateral wrist movement started relative to each '
                                                           'contralateral wrist movement events')
+    
+    # Each row of reaches contains reach metadata such as the angle, magnitude, and onset speed
     for row in reach_features.iterrows():
         row_data = row[1]
         start_time = row_data['Time of day (sec)']
@@ -295,6 +339,7 @@ def run_conversion(
 
     nwbfile.add_time_intervals(reaches)
 
+    # Write to an NWB file
     with NWBHDF5IO(fpath_out, 'w') as io:
         io.write(nwbfile)
 
@@ -309,6 +354,7 @@ def convert_dir(
     n_jobs=1,
     overwrite: bool = False
 ):
+    """Convert all files within a directory to NWB format."""
     all_data_files = [x.stem for x in Path(in_dir).iterdir() if ".h5" in x.suffix]
     nwb_files = [x.stem for x in Path(in_dir).iterdir() if ".nwb" in x.suffix]
 
@@ -318,6 +364,7 @@ def convert_dir(
         in_files = [os.path.join(in_dir, f"{x}.h5") for x in all_data_files if x not in nwb_files]
     out_files = [os.path.join(in_dir, f"{Path(x).stem}.nwb") for x in in_files]
 
+    # Run conversion separately for each subject and recording session
     Parallel(n_jobs=n_jobs)(
         delayed(run_conversion)(
             fpath_in,
