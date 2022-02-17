@@ -1,3 +1,41 @@
+"""Compute ECoG power spectra and save files for later plotting.
+
+Computes spectral power of whole-day ECoG recordings, applying Welch's
+method to compute power. Spectral power is then saved to NPY files for
+later plotting.
+
+
+Author
+------
+Steven Peterson
+
+
+Modification history
+--------------------
+02/16/2022 - Add comments and header
+07/16/2021 - Created script
+
+
+License
+-------
+Copyright (c) 2020 CatalystNeuro
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
+"""
+
 import glob
 import natsort
 import numpy as np
@@ -20,7 +58,9 @@ hgrid_fid = '/home/stepeter/AJILE/ajile12-nwb-data/headGrid.mat'
 aal_fid = '/home/stepeter/AJILE/ajile12-nwb-data/aal_rois.mat'
 n_parts = 12  # number of participants
 
-# Create ROI projection matrices
+# Create ROI projection matrices (project data onto common brain regions
+# because ECoG electrodes are in different locations from one participant
+# to the next)
 elec_dens_thresh = 3 #threshold for dipole density
 proj_mats = []
 for s in range(n_parts):
@@ -48,7 +88,7 @@ for s in range(n_parts):
     proj_mats.append(weight_mat)
         
 elec_densities = elec_densities/n_parts
-#Select ROI's that have electrode density above threshold
+# Select ROI's that have electrode density above threshold
 good_rois = np.nonzero(elec_densities>elec_dens_thresh)[0]
 proj_mats = np.asarray(proj_mats)
 print('Selected '+str(len(good_rois))+' regions')
@@ -60,6 +100,8 @@ large_win_samps = int(large_win * fs)
 freqs = np.arange(freq_range[0],freq_range[1]+1)
 n_freqs = len(freqs)
 
+# Iterate through each participant and session to compute spectral power
+# using Welch's method on every 30 minute window
 for part_ind in tqdm(range(n_parts)):
     for selected_roi in range(len(good_rois)):
         fids = natsort.natsorted(glob.glob(data_lp+'sub-'+str(part_ind+1).zfill(2)+'/*.nwb'))
@@ -98,7 +140,7 @@ for part_ind in tqdm(range(n_parts)):
                                                    spg_proj[np.newaxis, :].copy()),
                                                   axis=0)
 
-        # Save power result
+        # Save power result to NPY file
         roi_curr = roi_labels[good_rois[selected_roi]][:-2]
         np.save(sp+'P'+str(part_ind+1).zfill(2)+'_'+roi_curr+'_new.npy',pows_sbj)
         del pows_sbj
