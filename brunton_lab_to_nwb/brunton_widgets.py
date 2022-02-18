@@ -1,3 +1,46 @@
+"""Data dashboard for NWB dataset.
+
+Runs the interactive data dashboard for exploring our NWB dataset.
+Includes time series plots of pose and ECoG over user-defined
+time periods, pose skeleton animation, and ECoG electrode
+positions on a template brain.
+
+
+Author
+------
+Michael Scheid
+Ben Dichter
+Steven Peterson
+
+
+Modification history
+--------------------
+02/17/2022 - Add comments and header
+03/28/2021 - Enable function with streaming data
+03/10/2021 - Add pose skeleton plot
+02/05/2021 - Created script
+
+
+License
+-------
+Copyright (c) 2020 CatalystNeuro
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
+"""
+
 import time
 
 import bqplot.pyplot as bqplt
@@ -42,6 +85,7 @@ POSITION_KEYS = [
 
 
 class BruntonDashboard(widgets.VBox):
+    '''Class for data dashboard.'''
     def __init__(self, nwb_file: NWBFile, tab1="local"):
         self.box_layout = Layout(
             justify_content="space-between",
@@ -68,6 +112,8 @@ class BruntonDashboard(widgets.VBox):
         self.children = [accordion]
 
     def tab1(self, nwb_file):
+        '''Tab 1 on dashboard (pose skeleton, pose and ECoG time series, ECoG electrode
+        locations).'''
         position_keys = list(
             nwb_file.processing["behavior"]
             .data_interfaces["Position"]
@@ -87,6 +133,7 @@ class BruntonDashboard(widgets.VBox):
         reach_arm = list(reach_arm)
         reach_arm = "_".join(reach_arm)
 
+        # Initialize pose time series for wrist keypoints
         jointpos_widget = AllPositionTracesPlotlyWidget(
             nwb_file.processing["behavior"].data_interfaces["Position"][reach_arm],
             foreign_time_window_controller=time_trace_window_controller,
@@ -97,6 +144,7 @@ class BruntonDashboard(widgets.VBox):
             [jointpos_label, jointpos_widget], layout=self.box_layout
         )
 
+        # Set up pose skeleton animation
         skeleton_widget = SkeletonPlot(
             nwb_file.processing["behavior"].data_interfaces["Position"],
             foreign_time_window_controller=time_trace_window_controller,
@@ -107,6 +155,7 @@ class BruntonDashboard(widgets.VBox):
             [skeleton_label, skeleton_widget], layout=self.box_layout
         )
 
+        # Initialize ECoG time series plot
         ecog_widget = ElectricalSeriesWidget(
             nwb_file.acquisition["ElectricalSeries"],
             foreign_time_window_controller=time_trace_window_controller,
@@ -115,13 +164,14 @@ class BruntonDashboard(widgets.VBox):
         ecog_label = widgets.HTML(value=f"<b><font size=4>{text}</b>")
         ecog = widgets.VBox([ecog_label, ecog_widget], layout=self.box_layout)
 
+        # Initialize ECoG electrode locations
         brain_widget = HumanElectrodesPlotlyWidget(nwb_file.electrodes)
         text = "(c) Subject electrode locations"
         brain_label = widgets.HTML(value=f"<b><font size=4>{text}</b>")
         brain = widgets.VBox([brain_label, brain_widget], layout=self.box_layout)
 
+        # Define layout of each visalization on the dashboard
         tab1_hbox_header = widgets.HBox([time_trace_window_controller])
-
         tab1_row1_widgets = widgets.HBox(
             [
                 skeleton,
@@ -143,6 +193,8 @@ class BruntonDashboard(widgets.VBox):
         return tab1
 
     def tab_stream(self, nwb_file):
+        '''Alternate tab 1 that has scaled down features
+        to explore streaming data (instead of local files).'''
         position_keys = list(
             nwb_file.processing["behavior"]
             .data_interfaces["Position"]
@@ -162,6 +214,7 @@ class BruntonDashboard(widgets.VBox):
         reach_arm = list(reach_arm)
         reach_arm = "_".join(reach_arm)
 
+        # Initialize pose time series for wrist keypoints
         jointpos_widget = SeparateTracesPlotlyWidget(
             nwb_file.processing["behavior"].data_interfaces["Position"][reach_arm],
             foreign_time_window_controller=time_trace_window_controller,
@@ -176,12 +229,15 @@ class BruntonDashboard(widgets.VBox):
             nwb_file.processing["behavior"].data_interfaces["Position"],
             foreign_time_window_controller=time_trace_window_controller,
         )
+        
+        # Set up pose skeleton animation
         text =  "(a) Tracked joints"
         skeleton_label = widgets.HTML(value=f"<b><font size=4>{text}</b>")
         skeleton = widgets.VBox(
             [skeleton_label, skeleton_widget], layout=self.box_layout
         )
 
+        # Initialize ECoG time series plot
         ecog_widget = ElectricalSeriesWidget(
             nwb_file.acquisition["ElectricalSeries"],
             foreign_time_window_controller=time_trace_window_controller,
@@ -190,11 +246,13 @@ class BruntonDashboard(widgets.VBox):
         ecog_label = widgets.HTML(value=f"<b><font size=4>{text}</b>")
         ecog = widgets.VBox([ecog_label, ecog_widget], layout=self.box_layout)
 
+        # Initialize ECoG electrode locations
         brain_widget = HumanElectrodesPlotlyWidget(nwb_file.electrodes)
         text = "(c) Subject electrode locations"
         brain_label = widgets.HTML(value=f"<b><font size=4>{text}</b>")
         brain = widgets.VBox([brain_label, brain_widget], layout=self.box_layout)
 
+        # Define layout of each visalization on the dashboard
         tab1_hbox_header = widgets.HBox([time_trace_window_controller])
         tab1_row1_widgets = widgets.HBox(
             [
@@ -214,14 +272,8 @@ class BruntonDashboard(widgets.VBox):
         return tab1
 
     def tab2(self, nwb_file):
-        # spatial_series = nwb_file.processing['behavior'].data_interfaces['Position']['L_Ear']
-        # tt = get_timeseries_tt(spatial_series, istart=spatial_series.starting_time)
-        # event_trace_window_controller = StartAndDurationController(
-        #     tmax=tt[-1],
-        #     tmin=tt[0],
-        #     start=0,
-        #     duration=5
-        # )
+        '''Tab 2 contains plot of wrist position traces, time-locked to
+        reach events.'''
         eta_widget = ETAWidget(
             nwb_file.processing["behavior"].data_interfaces["ReachEvents"],
             nwb_file.processing["behavior"].data_interfaces["Position"],
@@ -242,18 +294,21 @@ class BruntonDashboard(widgets.VBox):
 
 
 class AllPositionTracesPlotlyWidget(SingleTraceWidget):
+    '''Widget for plotting pose time series data'''
     def set_out_fig(self):
-
+        # Get input about keypoint to plot and time window
         timeseries = self.controls["timeseries"].value
         time_window = self.controls["time_window"].value
 
+        # Determine where the time window starts and stops in the pose data
         istart = timeseries_time_to_ind(timeseries, time_window[0])
         istop = timeseries_time_to_ind(timeseries, time_window[1])
 
+        # Extract pose data for given time window
         data, units = get_timeseries_in_units(timeseries, istart, istop)
-
         tt = get_timeseries_tt(timeseries, istart, istop)
 
+        # Plot the time series data for each keypoint defined by POSITION_KEYS
         positions = self.timeseries.get_ancestor("Position")
         position_colors = {
             key: color for key, color in zip(POSITION_KEYS, DEFAULT_PLOTLY_COLORS)
@@ -300,6 +355,7 @@ class AllPositionTracesPlotlyWidget(SingleTraceWidget):
             self.out_fig.update_xaxes(title_text="time (s)")
 
         def on_change(change):
+            '''What happens when user cahnges the time window to plot over.'''
             time_window = self.controls["time_window"].value
             istart = timeseries_time_to_ind(timeseries, time_window[0])
             istop = timeseries_time_to_ind(timeseries, time_window[1])
@@ -324,6 +380,7 @@ class AllPositionTracesPlotlyWidget(SingleTraceWidget):
 
 
 class SkeletonPlot(widgets.VBox):
+    '''Skeleton plot of keypoint positions that animates over time'''
     def __init__(
         self,
         position: Position,
@@ -454,6 +511,7 @@ class SkeletonPlot(widgets.VBox):
                 self.plot.y = skeleton_vector[:, 1]
 
     def animate_scatter_chart(self, change=None):
+        '''Runs animation of pose skeleton'''
         if change["name"] == "value":
 
             frame_ind = change["new"]
@@ -471,6 +529,7 @@ class SkeletonPlot(widgets.VBox):
                 self.plot.y = skeleton_vector[:, 1]
 
     def calc_centroid(self, skeleton_vector):
+        '''Computes centroids needed for skeleton plot.'''
         base_of_neck = (skeleton_vector[2, :] + skeleton_vector[6, :])/2
         new_skeleton_vector = np.vstack(
             [skeleton_vector[0:3, :],
@@ -497,7 +556,7 @@ class SkeletonPlot(widgets.VBox):
         self.fig.layout.width = "600px"
 
 
-
+        # Segments between joints on skeleton plot
         self.plot = bqplt.plot(
             x=skeleton_vector[:, 0],
             y=skeleton_vector[:, 1],
@@ -507,6 +566,7 @@ class SkeletonPlot(widgets.VBox):
             names=self.skeleton_labels,
         )
 
+        # Joints (dots on skeleton plot)
         self.scat = bqplt.scatter(
             x=skeleton_vector[:, 0],
             y=skeleton_vector[:, 1],
@@ -547,6 +607,7 @@ class SkeletonPlot(widgets.VBox):
 
 
 class ETAWidget(widgets.VBox):
+    '''Plot pose time series traces, timelocked to reach events.'''
     def __init__(
         self,
         events: Events,
