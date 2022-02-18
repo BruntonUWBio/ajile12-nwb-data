@@ -1,4 +1,40 @@
-'''Utility functions for plots.'''
+"""Utility functions for plotting.
+
+Subfunctions used in Jupyter notebooks to process and
+plot NWB data, including ECoG, pose, movement events,
+and behavior labels.
+
+
+Author
+------
+Steven Peterson
+
+
+Modification history
+--------------------
+02/17/2022 - Add comments and header
+07/16/2021 - Created script
+
+
+License
+-------
+Copyright (c) 2020 CatalystNeuro
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
+"""
 
 import glob
 import natsort
@@ -69,14 +105,6 @@ def plot_clabels(clabels, uni_labs, targeted=False, first_val=True,
     if targeted:
         category_colors = np.array(['w', act_cols[targlab_colind]],
                                    dtype=object)
-#         if first_val:
-#             category_colors = np.array(['dimgray', act_cols[1], act_cols[2],
-#                                         act_cols[0], act_cols[3], act_cols[4]],
-#                                        dtype=object)
-#         else:
-#             category_colors = np.array(['dimgray', act_cols[1], act_cols[0],
-#                                         act_cols[3], act_cols[4]],
-#                                        dtype=object)
     else:
         category_colors = np.array([[1, 128/255, 178/255],'dimgray',
                                     'lightgreen','lightskyblue'],
